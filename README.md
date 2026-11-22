@@ -98,7 +98,7 @@ Next: a valley cross-section (rock layers, river deposits, channel) and a seabed
 
 **1. A recorded, logged session.** I recorded 78 seconds in Chrome trying every gesture while logging what the app detected ten times a second. The detected gesture changed 133 times, 64 of them lasting 0.2 s or less. Pinch fired for 14.5 s, mostly when I wasn't pinching; point registered for 0.2 s in total; peace never switched the model; and a one-frame dropout of my second hand made two-hand zoom jolt into one-hand rotate. Frame rate was fine (median 40 fps).
 
-**2. Offline checks (`npm test`).** A script feeds synthetic hand poses through the gesture engine with no camera. Each problem from the recording became a test case before it was fixed, and 4 of them failed on the original code. It now runs 19 checks, including values measured from my hand.
+**2. Offline checks (`npm test`).** A script feeds synthetic hand poses through the gesture engine with no camera. Each problem from the recording became a test case before it was fixed, and 4 of them failed on the original code. It now runs 23 checks, including values measured from my hand.
 
 **3. Guided live tests.** An on-screen prompt asks for one gesture at a time and scores how often the app recognised it, ignoring the first second of each step while the hand changes pose.
 
@@ -123,6 +123,13 @@ No threshold separates those, so the gesture design changed instead: **point upw
 **6. A built-in test mode (`?debug`).** The guided test is now part of the app. Add `?debug` to the URL, start the camera and click **Run test**: it prompts nine steps, then shows a pass or fail table with a **Copy results** button. Besides recognition it checks highlight steadiness, whether the part locked, whether pinch grabbed the aimed part, whether peace switched the model exactly once, and the median finger measurements for tuning. The pass marks (≥80% recognised, ≤10% false on a relaxed hand, ≤0.5 highlight changes per second) are my own suggested targets, not a standard.
 
 **7. Live checks after deployment.** Once the site was public I ran the guided test on it with a real webcam, alongside the security checks above. One run caught a new problem: while sweeping across the Earth model, a loosely raised middle finger turned my point into a peace sign, which jumped to the next model. Peace now only switches when the hand is held still (palm under 250 px/s for 0.15 s, about 0.4 s in all). The next live run passed all 9 steps, and the model only changed during the peace step.
+
+**8. A bug only real use showed.** Using the live site normally, outside the test, gestures still dropped out: point and drag let go, and the model sometimes switched as my fingers changed. The cause was how hands were told apart. The app followed each hand by MediaPipe's "Left" or "Right" label, and MediaPipe often flips that label on one hand from frame to frame. Every flip made the app treat my hand as a new one:
+- its gesture restarted from nothing
+- the old hand lingered as a ghost second hand, which after a quarter of a second counted as two-hand zoom and dropped whatever I was pointing at or dragging
+- the peace sign re-armed, so the model could switch again
+
+Hands are now followed by where they are in the camera image, and the label is ignored. Four new offline checks feed one hand whose label flips every frame. They failed before the change and pass after it: the gesture holds, one hand is never counted as two, a pinch survives, and two hands keep their own identity. The next guided run passed all 9 steps.
 
 ## Results
 
@@ -159,12 +166,13 @@ Scores vary between runs, so here is every complete `?debug` run after the main 
 | 6 | Live, sports car | 6 of 9 | open 65%, pinch grabbed a neighbouring part, relaxed hand 19% false |
 | 7 | Live, Earth | 7 of 9 | a moving point read as peace and switched model, which led to the "hold still" fix |
 | 8 | Live, Earth | **9 of 9** | no accidental model switch; relaxed hand exactly at the 10% limit |
+| 9 | Local, jet engine | **9 of 9** | after the hand-tracking fix: point, pinch and peace 100%, relaxed hand 0% false |
 
 ## What changed in the code
 
 | File | Change |
 |---|---|
-| `src/gestureEngine.js` | Finger shape measured on MediaPipe's 3D `worldLandmarks`; each finger keeps its last state between an up and a down threshold; pinch needs a tighter gap and 4 frames; point also counts when the index clearly outreaches the other fingers; thresholds are named constants |
+| `src/gestureEngine.js` | Hands followed by position in the image instead of MediaPipe's unreliable Left/Right label; finger shape measured on MediaPipe's 3D `worldLandmarks`; each finger keeps its last state between an up and a down threshold; pinch needs a tighter gap and 4 frames; point also counts when the index clearly outreaches the other fingers; thresholds are named constants |
 | `src/handTracking.js` | Also returns the 3D landmarks; loads only the self-hosted engine and model (the CDN fallback was removed) |
 | `vercel.json` | New: Content-Security-Policy, Permissions-Policy and other security headers |
 | `src/scene.js` | Sticky selection (`chooseSticky`); clear error if a model has more parts than the shader supports (24) |
