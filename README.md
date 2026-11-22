@@ -47,7 +47,7 @@ Every frame, MediaPipe finds up to two hands and returns 21 landmarks for each. 
 | **Other users cannot see or affect your session** | There is no server, account, database or shared state. Every visitor runs their own copy in their own browser, and nothing anyone does is sent anywhere or shown to anyone else. The only URL option read is `?debug`, and nothing from the URL is displayed. |
 | **The page cannot be hijacked by another site** | `frame-ancestors 'none'` and `X-Frame-Options: DENY` stop other sites embedding it to trick you into allowing the camera. HTTPS is enforced (HSTS). |
 
-**How it was checked.** I served the production build with these exact headers and ran the real tracking pipeline under them; it worked normally. I then tried, from inside the page, to upload data to an outside server and to load an outside "tracking pixel". The browser blocked both and logged a policy violation. The headers are in [`vercel.json`](vercel.json).
+**How it was checked.** I served the production build with these exact headers and ran the real tracking pipeline under them; it worked normally. I then tried, from inside the page, to upload data to an outside server and to load an outside "tracking pixel". The browser blocked both and logged a policy violation. After deploying, I repeated this on the live site, adding a WebSocket attempt: all three were blocked, and no request reached the outside server. I then ran the full guided test on the live site with a real webcam, three times. Over more than a minute of camera use each time, the page contacted only `holohand-earth.vercel.app` (6 requests, all loading its own files at start-up) and stored nothing. The headers are in [`vercel.json`](vercel.json).
 
 **Check it yourself.** Open the browser's developer tools (F12), go to the Network tab and reload: every request goes to `holohand-earth.vercel.app`. Click the page request to see the `Content-Security-Policy` and `Permissions-Policy` response headers.
 
@@ -90,7 +90,7 @@ The first geological model is a cutaway of the Earth, in its own **Earth science
 
 Layers below the crust are drawn to scale using standard reference depths (Dziewonski and Anderson, 1981). The crust is drawn about six times thicker than real so it can be seen, and its on-screen description says so.
 
-In live tests on this model, gestures scored as on the other models (8 of 9 test steps passing) and pinch grabbed the layer I had aimed at. One limit: on the closed globe the crust surrounds everything, so it overlaps the inner layers and the highlight flickers more (0.8 changes per second against 0–0.4 on other models). Opening the model first avoids it.
+In the latest live test on this model, all 9 steps passed and pinch grabbed the layer I had aimed at. One limit: on the closed globe the crust surrounds everything, so it overlaps the inner layers. In one run the highlight flickered at 0.8 changes per second (against 0–0.4 on other models); in the latest run it held steady. Opening the model first avoids the overlap.
 
 Next: a valley cross-section (rock layers, river deposits, channel) and a seabed or plate-boundary model.
 
@@ -122,6 +122,8 @@ No threshold separates those, so the gesture design changed instead: **point upw
 
 **6. A built-in test mode (`?debug`).** The guided test is now part of the app. Add `?debug` to the URL, start the camera and click **Run test**: it prompts nine steps, then shows a pass or fail table with a **Copy results** button. Besides recognition it checks highlight steadiness, whether the part locked, whether pinch grabbed the aimed part, whether peace switched the model exactly once, and the median finger measurements for tuning. The pass marks (≥80% recognised, ≤10% false on a relaxed hand, ≤0.5 highlight changes per second) are my own suggested targets, not a standard.
 
+**7. Live checks after deployment.** Once the site was public I ran the guided test on it with a real webcam, alongside the security checks above. One run caught a new problem: while sweeping across the Earth model, a loosely raised middle finger turned my point into a peace sign, which jumped to the next model. Peace now only switches when the hand is held still (palm under 250 px/s for 0.15 s, about 0.4 s in all). The next live run passed all 9 steps, and the model only changed during the peace step.
+
 ## Results
 
 <picture>
@@ -143,6 +145,21 @@ No threshold separates those, so the gesture design changed instead: **point upw
 
 <sub>One person, one webcam, one room. The first guided test already included the first round of fixes; the original code was only tested in the free recording above. Other hands and lighting may need small threshold changes.</sub>
 
+### Every full run, in order
+
+Scores vary between runs, so here is every complete `?debug` run after the main fixes, not just the best one:
+
+| Run | Where, model | Steps passed | Notes |
+|---|---|---|---|
+| 1 | Local, jet engine | 8 of 9 | fast sweep lost tracking |
+| 2 | Local, jet engine | **9 of 9** | after the stray second-hand fix |
+| 3 | Local, Earth | 5 of 9 | I wasn't ready; open and aim started over 5 s late |
+| 4 | Local, Earth | 8 of 9 | pinch grabbed a neighbouring layer, which led to the "grab the locked part" fix |
+| 5 | Local, Earth | 8 of 9 | aim flickered on the closed globe (0.8/s) |
+| 6 | Live, sports car | 6 of 9 | open 65%, pinch grabbed a neighbouring part, relaxed hand 19% false |
+| 7 | Live, Earth | 7 of 9 | a moving point read as peace and switched model, which led to the "hold still" fix |
+| 8 | Live, Earth | **9 of 9** | no accidental model switch; relaxed hand exactly at the 10% limit |
+
 ## What changed in the code
 
 | File | Change |
@@ -151,7 +168,7 @@ No threshold separates those, so the gesture design changed instead: **point upw
 | `src/handTracking.js` | Also returns the 3D landmarks; loads only the self-hosted engine and model (the CDN fallback was removed) |
 | `vercel.json` | New: Content-Security-Policy, Permissions-Policy and other security headers |
 | `src/scene.js` | Sticky selection (`chooseSticky`); clear error if a model has more parts than the shader supports (24) |
-| `src/main.js` | Pinch grabs the part aimed at in the last 2 s, otherwise the locked part; part name at the fingertip; peace switches once per sign; two-hand zoom waits 0.25 s and the hand already in control keeps it; `?debug` hook |
+| `src/main.js` | Pinch grabs the part aimed at in the last 2 s, otherwise the locked part; part name at the fingertip; peace switches once per sign and only when the hand is held still; two-hand zoom waits 0.25 s and the hand already in control keeps it; `?debug` hook |
 | `src/debugTest.js` | New: the guided test mode |
 | `scripts/gesture-selftest.mjs` | New: offline checks for `npm test` |
 | `src/models/earth.js` | New: the Earth's Interior model |
@@ -212,7 +229,7 @@ Add `?debug` to the URL for the guided live test. The camera only works on `http
 | Point up (index finger) | Highlight the part under your fingertip; its name shows next to it. Hold still to lock it. |
 | Pinch | Grab the highlighted part, drag it out, release to snap it back |
 | Two hands | Move them apart or together to zoom |
-| Peace sign (hold ~0.3 s) | Jump to the next model |
+| Peace sign (hold still ~0.4 s) | Jump to the next model |
 
 ### Mouse and keyboard
 
@@ -221,7 +238,7 @@ Drag = rotate · scroll = zoom · click a part = inspect it · `Space` = explode
 ### Tips
 
 - Even light and a plain background help. Keep your hand 40–80 cm from the camera, palm facing it.
-- Open and close your hand slowly. The peace sign needs a short hold so it does not trigger by accident.
+- Open and close your hand slowly. The peace sign needs a short, still hold so it does not trigger by accident.
 
 ### Code layout
 
