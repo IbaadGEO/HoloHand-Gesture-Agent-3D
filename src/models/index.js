@@ -2,6 +2,7 @@ import { buildJet } from './jet.js';
 import { buildRadial } from './radial.js';
 import { buildCar } from './car.js';
 import { buildBrain } from './brain.js';
+import { buildEarth } from './earth.js';
 
 // view = starting rotation (radians). parts are built lazily the first time a model is shown.
 export const MODELS = [
@@ -36,5 +37,13 @@ export const MODELS = [
     subtitle: 'Lobes, cerebellum and the structures inside',
     view: { x: 0.18, y: 0.7, z: 0 },
     build: buildBrain,
+  },
+  {
+    id: 'earth',
+    name: "Earth's Interior",
+    category: 'Earth science',
+    subtitle: 'Crust, mantle and core, opened up',
+    view: { x: 0.35, y: 0.6, z: 0 },
+    build: buildEarth,
   },
 ];

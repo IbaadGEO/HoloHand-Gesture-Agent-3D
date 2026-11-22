@@ -283,8 +283,9 @@ function control(t, dt) {
     } else if (g === 'PINCH') {
       const pp = { x: h.pinchPt.x * W, y: h.pinchPt.y * H };
       if (!grab) {
-        // grab the part you were pointing at; only search near the pinch when nothing was highlighted just before
-        const idx = t - lastHover.t < 0.9 ? lastHover.i : scene.pick(pp.x, pp.y, 120);
+        // grab what you aimed at: the part pointed at in the last 2 s, else the locked part,
+        // and only search near the pinch when neither exists (switching from point to pinch can take over a second)
+        const idx = t - lastHover.t < 2 ? lastHover.i : scene.sel >= 0 ? scene.sel : scene.pick(pp.x, pp.y, 120);
         if (idx >= 0) {
           grab = { part: idx, last: pp };
           scene.setSel(idx);
