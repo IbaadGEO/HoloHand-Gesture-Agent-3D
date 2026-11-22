@@ -1,18 +1,8 @@
 import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 
-const CDN_WASM = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm';
-const CDN_MODEL =
-  'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task';
-
-async function localExists(url) {
-  try {
-    const r = await fetch(url, { method: 'HEAD' });
-    const type = r.headers.get('content-type') || '';
-    return r.ok && !type.includes('text/html');
-  } catch {
-    return false;
-  }
-}
+// Only self-hosted files: no third-party code or requests (the site's Content-Security-Policy also blocks them)
+const WASM = '/wasm';
+const MODEL = '/models/hand_landmarker.task';
 
 export class HandTracker {
   constructor() {
@@ -21,43 +11,25 @@ export class HandTracker {
     this.info = '';
   }
 
-  /** Tries local files first, then CDN. GPU first, then CPU. Throws if everything fails. */
+  /** Loads the self-hosted model, GPU first, then CPU. Throws if both fail. */
   async init() {
     let lastErr = null;
-    const wasmBases = [];
-    if (await localExists('/wasm/vision_wasm_internal.js')) wasmBases.push({ url: '/wasm', tag: 'LOCAL' });
-    wasmBases.push({ url: CDN_WASM, tag: 'CDN' });
-
-    const models = [];
-    if (await localExists('/models/hand_landmarker.task')) models.push({ url: '/models/hand_landmarker.task', tag: 'LOCAL' });
-    models.push({ url: CDN_MODEL, tag: 'CDN' });
-
-    for (const wb of wasmBases) {
-      let fileset;
+    const fileset = await FilesetResolver.forVisionTasks(WASM);
+    for (const delegate of ['GPU', 'CPU']) {
       try {
-        fileset = await FilesetResolver.forVisionTasks(wb.url);
+        this.landmarker = await HandLandmarker.createFromOptions(fileset, {
+          baseOptions: { modelAssetPath: MODEL, delegate },
+          runningMode: 'VIDEO',
+          numHands: 2,
+          minHandDetectionConfidence: 0.55,
+          minHandPresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+        });
+        this.ready = true;
+        this.info = delegate;
+        return;
       } catch (e) {
         lastErr = e;
-        continue;
-      }
-      for (const m of models) {
-        for (const delegate of ['GPU', 'CPU']) {
-          try {
-            this.landmarker = await HandLandmarker.createFromOptions(fileset, {
-              baseOptions: { modelAssetPath: m.url, delegate },
-              runningMode: 'VIDEO',
-              numHands: 2,
-              minHandDetectionConfidence: 0.55,
-              minHandPresenceConfidence: 0.5,
-              minTrackingConfidence: 0.5,
-            });
-            this.ready = true;
-            this.info = `${delegate} / ${m.tag}`;
-            return;
-          } catch (e) {
-            lastErr = e;
-          }
-        }
       }
     }
     throw lastErr || new Error('HandLandmarker failed to initialise');

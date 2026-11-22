@@ -1,6 +1,6 @@
 // Runs automatically after `npm install`.
 // 1) copies the MediaPipe WASM runtime into /public/wasm
-// 2) downloads the hand-landmarker model into /public/models (optional – the app falls back to a CDN)
+// 2) downloads the hand-landmarker model into /public/models if it is missing (both are also committed)
 // Never fails the install.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -15,7 +15,7 @@ try {
   for (const f of fs.readdirSync(src)) fs.copyFileSync(path.join(src, f), path.join(dst, f));
   console.log('[setup] MediaPipe WASM copied to public/wasm');
 } catch (e) {
-  console.log('[setup] WASM copy skipped (app will use CDN):', e.message);
+  console.log('[setup] WASM copy skipped (using the committed copy in public/wasm):', e.message);
 }
 
 const MODEL_URL =
@@ -31,7 +31,7 @@ if (!fs.existsSync(modelFile)) {
     fs.writeFileSync(modelFile, Buffer.from(await r.arrayBuffer()));
     console.log('[setup] hand_landmarker.task downloaded');
   } catch (e) {
-    console.log('[setup] model download skipped (app will fetch it from CDN at runtime):', e.message);
+    console.log('[setup] model download skipped (using the committed copy in public/models):', e.message);
   }
 }
 process.exit(0);

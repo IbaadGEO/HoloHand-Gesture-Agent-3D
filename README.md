@@ -6,7 +6,7 @@ Fork maintained by **[Ibaad Sidik](https://github.com/IbaadGEO)** · original pr
 
 **Hand-controlled exploded 3D views in the browser, measured, fixed and extended with a cutaway of the Earth's interior**
 
-[![Live demo](https://img.shields.io/badge/live_demo-holohand--earth.vercel.app-1971c2?style=flat-square)](https://holohand-earth.vercel.app) [![Original: tubakhxn/HoloHand](https://img.shields.io/badge/original-tubakhxn%2FHoloHand-7048e8?style=flat-square)](https://github.com/tubakhxn/HoloHand-Gesture-Agent-3D) ![Three.js 0.170](https://img.shields.io/badge/Three.js-0.170-049ef4?style=flat-square) ![MediaPipe Tasks Vision 0.10.14](https://img.shields.io/badge/MediaPipe-0.10.14-0097a7?style=flat-square) ![Vite 5.4](https://img.shields.io/badge/Vite-5.4-646cff?style=flat-square) ![Live test: 9 of 9](https://img.shields.io/badge/live_test-9_of_9_steps-2f9e44?style=flat-square) [![Code: MIT](https://img.shields.io/badge/code-MIT-868e96?style=flat-square)](LICENSE)
+[![Live demo](https://img.shields.io/badge/live_demo-holohand--earth.vercel.app-1971c2?style=flat-square)](https://holohand-earth.vercel.app) [![Privacy: camera stays on your device](https://img.shields.io/badge/privacy-camera_stays_on_device-2f9e44?style=flat-square)](#privacy-and-security) [![Original: tubakhxn/HoloHand](https://img.shields.io/badge/original-tubakhxn%2FHoloHand-7048e8?style=flat-square)](https://github.com/tubakhxn/HoloHand-Gesture-Agent-3D) ![Three.js 0.170](https://img.shields.io/badge/Three.js-0.170-049ef4?style=flat-square) ![MediaPipe Tasks Vision 0.10.14](https://img.shields.io/badge/MediaPipe-0.10.14-0097a7?style=flat-square) ![Vite 5.4](https://img.shields.io/badge/Vite-5.4-646cff?style=flat-square) ![Live test: 9 of 9](https://img.shields.io/badge/live_test-9_of_9_steps-2f9e44?style=flat-square) [![Code: MIT](https://img.shields.io/badge/code-MIT-868e96?style=flat-square)](LICENSE)
 
 <a href="https://holohand-earth.vercel.app"><img src="docs/media/earth.webp" width="820" alt="The Earth's Interior model: the closed globe opens so the mantle and core halves separate and the crust pieces fly outward, the view rotates, and clicking a layer shows the upper mantle's description in the side panel"></a>
 
@@ -33,6 +33,30 @@ flowchart LR
 ```
 
 Every frame, MediaPipe finds up to two hands and returns 21 landmarks for each. The gesture engine turns them into one of open, fist, point, pinch or peace, plus how open the hand is and where the fingertip is. Those drive the model: openness explodes it, palm movement rotates it, the fingertip highlights a part and a pinch drags it out.
+
+## Privacy and security
+
+**Your camera video never leaves your device.** Hand tracking runs entirely inside your browser, and the site is locked down so that the browser itself blocks any attempt to send data anywhere else. These are the guarantees for the live site at [holohand-earth.vercel.app](https://holohand-earth.vercel.app), built from this repository:
+
+| Guarantee | How it is enforced |
+|---|---|
+| **Camera frames are never uploaded** | Frames go from the camera straight to MediaPipe running in the page. No code records, encodes, saves or sends them. A Content-Security-Policy (`connect-src 'self'`, `img-src 'self'`, `form-action 'none'`) makes the browser refuse any connection, form or image request to another server, even if a library tried. |
+| **Nothing is stored** | No cookies, local storage, IndexedDB, recordings or screenshots. Closing the tab ends camera access and leaves nothing behind. |
+| **No third-party code, trackers or analytics** | The app, the MediaPipe engine and the hand model are all served from this site. There are no CDNs, fonts, ads or analytics, and the policy (`default-src 'self'`) blocks loading anything from elsewhere. |
+| **Camera only, never the microphone** | The app asks for video with `audio: false`, and a Permissions-Policy blocks the microphone, location, screen capture, USB, Bluetooth and other device access. |
+| **Other users cannot see or affect your session** | There is no server, account, database or shared state. Every visitor runs their own copy in their own browser, and nothing anyone does is sent anywhere or shown to anyone else. The only URL option read is `?debug`, and nothing from the URL is displayed. |
+| **The page cannot be hijacked by another site** | `frame-ancestors 'none'` and `X-Frame-Options: DENY` stop other sites embedding it to trick you into allowing the camera. HTTPS is enforced (HSTS). |
+
+**How it was checked.** I served the production build with these exact headers and ran the real tracking pipeline under them; it worked normally. I then tried, from inside the page, to upload data to an outside server and to load an outside "tracking pixel". The browser blocked both and logged a policy violation. The headers are in [`vercel.json`](vercel.json).
+
+**Check it yourself.** Open the browser's developer tools (F12), go to the Network tab and reload: every request goes to `holohand-earth.vercel.app`. Click the page request to see the `Content-Security-Policy` and `Permissions-Policy` response headers.
+
+**What this cannot cover.**
+
+- **Hosting:** like any website, the host (Vercel) receives standard request details such as your IP address and browser type when the page files load. It never receives camera data.
+- **Your device:** malware or a malicious browser extension on your own computer can see anything your browser shows. No website can protect against that.
+- **Other copies:** these guarantees apply to this repository and the site built from it. A fork or copy elsewhere may have changed the code or headers.
+- **Stopping the camera:** the camera stays on while the tab is open. To stop it, close the tab or switch it off from the camera icon in the address bar.
 
 ## What the app does
 
@@ -124,7 +148,8 @@ No threshold separates those, so the gesture design changed instead: **point upw
 | File | Change |
 |---|---|
 | `src/gestureEngine.js` | Finger shape measured on MediaPipe's 3D `worldLandmarks`; each finger keeps its last state between an up and a down threshold; pinch needs a tighter gap and 4 frames; point also counts when the index clearly outreaches the other fingers; thresholds are named constants |
-| `src/handTracking.js` | Also returns the 3D landmarks |
+| `src/handTracking.js` | Also returns the 3D landmarks; loads only the self-hosted engine and model (the CDN fallback was removed) |
+| `vercel.json` | New: Content-Security-Policy, Permissions-Policy and other security headers |
 | `src/scene.js` | Sticky selection (`chooseSticky`); clear error if a model has more parts than the shader supports (24) |
 | `src/main.js` | Pinch grabs the part aimed at in the last 2 s, otherwise the locked part; part name at the fingertip; peace switches once per sign; two-hand zoom waits 0.25 s and the hand already in control keeps it; `?debug` hook |
 | `src/debugTest.js` | New: the guided test mode |
@@ -150,6 +175,7 @@ No threshold separates those, so the gesture design changed instead: **point upw
 ## Built with
 
 - **Web:** Three.js 0.170 point clouds with a custom shader, MediaPipe Tasks Vision 0.10.14 Hand Landmarker (WASM, GPU with CPU fallback), plain JavaScript, Vite 5.4.
+- **Security:** static hosting on Vercel with a strict Content-Security-Policy and Permissions-Policy; no server, storage or third-party requests.
 - **Testing:** Node for the offline checks; the in-app `?debug` test for live runs.
 - **README media:** recorded with Playwright (headless Chromium) and converted with ffmpeg; the results chart is drawn with matplotlib.
 
@@ -174,7 +200,7 @@ npm run dev      # open the URL Vite prints and click Start camera
 npm test         # offline gesture and selection checks
 ```
 
-Add `?debug` to the URL for the guided live test. The camera only works on `http://localhost` or `https`. `npm install` copies the MediaPipe WASM and downloads the hand model into `public/`; if that is blocked, the app fetches both from a CDN at runtime.
+Add `?debug` to the URL for the guided live test. The camera only works on `http://localhost` or `https`. The MediaPipe WASM engine and hand model are committed in `public/` and served by the site itself; the app never loads code or models from other sites.
 
 ### Gestures
 
@@ -202,7 +228,7 @@ Drag = rotate · scroll = zoom · click a part = inspect it · `Space` = explode
 | Path | Role |
 |---|---|
 | `src/main.js` | app loop, hand overlay, gesture to action, labels, UI |
-| `src/handTracking.js` | MediaPipe wrapper (2 hands, local files then CDN, GPU then CPU) |
+| `src/handTracking.js` | MediaPipe wrapper (2 hands, self-hosted files only, GPU then CPU) |
 | `src/gestureEngine.js` | landmarks to gesture, openness, smoothed palm, fingertip and pinch, wrist roll |
 | `src/scene.js` | Three.js point-cloud renderer: explode, scatter transition, picking, part dragging |
 | `src/models/` | `shapes.js` (point sampling) and the jet, radial, car, brain and earth models |
