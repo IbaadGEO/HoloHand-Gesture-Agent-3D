@@ -198,6 +198,10 @@ let twoActive = false;
 let primaryId = null;
 const TWO_HOLD = 0.25;
 let peaceArmed = true; // peace switches model once; the hand must leave peace before it can switch again
+let peaceStill = 0; // seconds the peace sign has been held still
+let peaceSpeed = 0; // smoothed palm speed while in peace (px/s)
+// shortcut: thresholds picked from one live session (a loose point while sweeping read as peace); retune with ?debug if needed
+const PEACE_MAX_SPEED = 250, PEACE_STILL_S = 0.15;
 const prevPalm = new Map();
 let activeKey = '';
 
@@ -215,7 +219,11 @@ function endGrab() {
 function control(t, dt) {
   const live = perc.hands.filter((h) => !h.held);
   $('s-hands').textContent = String(live.length);
-  if (!live.some((h) => h.gesture === 'PEACE')) peaceArmed = true;
+  if (!live.some((h) => h.gesture === 'PEACE')) {
+    peaceArmed = true;
+    peaceStill = 0;
+    peaceSpeed = 0;
+  }
 
   // two hands: distance between palms = zoom. Held hands count, so a one-frame dropout doesn't fall back to one-hand rotate.
   // A second hand must stay TWO_HOLD seconds first, so a stray detection can't interrupt a one-hand gesture.
@@ -297,7 +305,12 @@ function control(t, dt) {
         grab.last = pp;
       }
     } else if (g === 'PEACE') {
-      if (peaceArmed && t > peaceCool) {
+      // a deliberate peace sign is held still; a moving hand that only looks like one (e.g. a loose point) must not switch model
+      const prev = prevPalm.get(h.id);
+      const inst = prev ? Math.hypot(palmPx.x - prev.x, palmPx.y - prev.y) / dt : PEACE_MAX_SPEED * 2;
+      peaceSpeed += (inst - peaceSpeed) * 0.2; // smooth: the palm only moves on frames with a new camera image
+      peaceStill = peaceSpeed < PEACE_MAX_SPEED ? peaceStill + dt : 0;
+      if (peaceArmed && peaceStill >= PEACE_STILL_S && t > peaceCool) {
         peaceArmed = false;
         peaceCool = t + 1.6;
         scene.next();
