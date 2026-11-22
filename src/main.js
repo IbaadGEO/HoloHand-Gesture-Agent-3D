@@ -193,6 +193,11 @@ let grab = null;
 let lastHover = { i: -1, t: 0 };
 let dwell = { i: -1, t: 0 };
 let peaceCool = 0;
+let twoSince = -1;
+let twoActive = false;
+let primaryId = null;
+const TWO_HOLD = 0.25;
+let peaceArmed = true; // peace switches model once; the hand must leave peace before it can switch again
 const prevPalm = new Map();
 let activeKey = '';
 
@@ -210,10 +215,16 @@ function endGrab() {
 function control(t, dt) {
   const live = perc.hands.filter((h) => !h.held);
   $('s-hands').textContent = String(live.length);
+  if (!live.some((h) => h.gesture === 'PEACE')) peaceArmed = true;
 
-  // two hands: distance between palms = zoom
-  if (live.length >= 2) {
-    const a = live[0].palm, b = live[1].palm;
+  // two hands: distance between palms = zoom. Held hands count, so a one-frame dropout doesn't fall back to one-hand rotate.
+  // A second hand must stay TWO_HOLD seconds first, so a stray detection can't interrupt a one-hand gesture.
+  const both = live.length >= 1 && perc.hands.length >= 2;
+  if (!both) twoSince = -1;
+  else if (twoSince < 0) twoSince = t;
+  twoActive = both && t - twoSince >= TWO_HOLD;
+  if (twoActive) {
+    const a = perc.hands[0].palm, b = perc.hands[1].palm;
     const dist = Math.hypot((a.x - b.x) * W, (a.y - b.y) * H);
     if (!zoomRef) zoomRef = { d0: Math.max(60, dist), s0: scene.scaleTarget };
     scene.scaleTarget = clamp((zoomRef.s0 * dist) / zoomRef.d0, 0.5, 2.6);
@@ -227,7 +238,9 @@ function control(t, dt) {
   }
   zoomRef = null;
 
-  const h = live[0];
+  // stay with the hand already in control; a newly detected hand doesn't take over
+  const h = live.find((x) => x.id === primaryId) || live[0];
+  primaryId = h ? h.id : null;
   if (!h) {
     endGrab();
     scene.holdVel = draggingMouse;
@@ -257,7 +270,7 @@ function control(t, dt) {
     if (g === 'OPEN' && prev && Math.hypot(palmPx.x - prev.x, palmPx.y - prev.y) > 6) setActive('MOVE');
   } else {
     if (g === 'POINT') {
-      const idx = scene.pick(h.tip.x * W, h.tip.y * H, 95);
+      const idx = scene.pick(h.tip.x * W, h.tip.y * H, 95, scene.hover);
       scene.setHover(idx);
       if (idx >= 0) {
         lastHover = { i: idx, t };
@@ -270,8 +283,8 @@ function control(t, dt) {
     } else if (g === 'PINCH') {
       const pp = { x: h.pinchPt.x * W, y: h.pinchPt.y * H };
       if (!grab) {
-        let idx = scene.pick(pp.x, pp.y, 170);
-        if (idx < 0 && t - lastHover.t < 0.9) idx = lastHover.i;
+        // grab the part you were pointing at; only search near the pinch when nothing was highlighted just before
+        const idx = t - lastHover.t < 0.9 ? lastHover.i : scene.pick(pp.x, pp.y, 120);
         if (idx >= 0) {
           grab = { part: idx, last: pp };
           scene.setSel(idx);
@@ -283,7 +296,8 @@ function control(t, dt) {
         grab.last = pp;
       }
     } else if (g === 'PEACE') {
-      if (t > peaceCool) {
+      if (peaceArmed && t > peaceCool) {
+        peaceArmed = false;
         peaceCool = t + 1.6;
         scene.next();
       }
@@ -411,6 +425,22 @@ function drawRing(h) {
     }
   }
   ctx.restore();
+  // name of the part a pinch would grab (point) or is holding (pinch)
+  if (g === 'POINT') tipLabel(scene.parts[scene.hover], h.tip.x * W + 28, h.tip.y * H);
+  else if (g === 'PINCH' && grab) tipLabel(scene.parts[grab.part], h.pinchPt.x * W + 24, h.pinchPt.y * H);
+}
+
+function tipLabel(part, x, y) {
+  if (!part) return;
+  ctx.save();
+  ctx.font = '600 13px ui-sans-serif, system-ui, "Segoe UI", sans-serif';
+  ctx.textBaseline = 'middle';
+  const w = ctx.measureText(part.name).width;
+  ctx.fillStyle = 'rgba(10, 10, 20, 0.78)';
+  ctx.fillRect(x - 7, y - 12, w + 14, 24);
+  ctx.fillStyle = part.color;
+  ctx.fillText(part.name, x, y);
+  ctx.restore();
 }
 
 function drawZoom(a, b) {
@@ -488,7 +518,7 @@ function drawOverlay() {
   const live = perc.hands.filter((h) => !h.held);
   if (ui.skeleton) for (const h of live) drawHand(h);
   for (const h of live) drawRing(h);
-  if (live.length >= 2) drawZoom(live[0], live[1]);
+  if (twoActive) drawZoom(perc.hands[0], perc.hands[1]);
 }
 
 // ------------------------------------------------------------------ main loop
@@ -514,3 +544,19 @@ function frame(now) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+// ?debug in the URL adds a guided gesture test with a results table
+if (new URLSearchParams(location.search).has('debug')) {
+  import('./debugTest.js').then((m) =>
+    m.mount(() => ({
+      gesture: activeKey,
+      hover: scene.hover,
+      sel: scene.sel,
+      grabbed: grab ? grab.part : -1,
+      model: scene.index,
+      parts: scene.parts,
+      hands: perc.hands.filter((h) => !h.held).sort((a, b) => (b.id === primaryId) - (a.id === primaryId)),
+      tracking: trackingState,
+    })),
+  );
+}

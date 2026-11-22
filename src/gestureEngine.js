@@ -8,6 +8,13 @@ export const HAND_CONNECTIONS = [
 ];
 
 const FINGERS = [[8, 5], [12, 9], [16, 13], [20, 17]]; // [tip, mcp] for index, middle, ring, pinky
+// finger hysteresis: becomes extended above UP, curled below DOWN, otherwise keeps its last state
+const UP = 1.5, DOWN = 1.4;
+// pinch: thumb-index gap in hand sizes to start / end, and frames it must hold
+// ON is tight because pointing at the camera squashes depth and puts the thumb ~0.25 from the index tip (real pinch ~0.13)
+const PINCH_ON = 0.18, PINCH_OFF = 0.4, PINCH_FRAMES = 4;
+// point also counts when the index clearly outreaches the other fingers, even if it never passes UP (depth squash)
+const POINT_MIN = 1.25, POINT_MARGIN = 0.45;
 
 class HandState {
   constructor() {
@@ -15,6 +22,7 @@ class HandState {
     this.cand = 'NONE';
     this.streak = 0;
     this.pinching = false;
+    this.ext = null; // per-finger extended state, null until first frame
     this.palm = null;
     this.tip = null;
     this.pp = null;
@@ -76,14 +84,17 @@ export class GestureEngine {
   _process(st, id, h, dt, map, aspect) {
     st.missing = 0;
     const raw = h.landmarks;
-    // mirrored, aspect-corrected space for distance maths
+    // mirrored, aspect-corrected image space, used for wrist roll
     const L = raw.map((p) => ({ x: (1 - p.x) * aspect, y: p.y }));
-    const d = (a, b) => Math.hypot(L[a].x - L[b].x, L[a].y - L[b].y);
+    // hand shape is measured in 3D when available: a finger pointing at the camera looks short in the image
+    const G = h.world || L.map((p) => ({ ...p, z: 0 }));
+    const d = (a, b) => Math.hypot(G[a].x - G[b].x, G[a].y - G[b].y, G[a].z - G[b].z);
     const size = Math.max(1e-4, d(0, 9));
 
     const ratios = FINGERS.map(([tp, mc]) => d(tp, 0) / Math.max(1e-4, d(mc, 0)));
-    const ext = ratios.map((r) => r > 1.5);
-    const curl = ratios.map((r) => r < 1.32);
+    st.ext = ratios.map((r, i) => (r > UP ? true : r < DOWN ? false : st.ext ? st.ext[i] : r > (UP + DOWN) / 2));
+    const ext = st.ext;
+    const curl = ext.map((e) => !e);
     const avg = (ratios[0] + ratios[1] + ratios[2] + ratios[3]) / 4;
     const rawOpen = clamp((avg - 1.05) / (1.8 - 1.05), 0, 1);
     st.open += (rawOpen - st.open) * 0.45;
@@ -91,14 +102,14 @@ export class GestureEngine {
     // pinch with hysteresis
     const pr = d(4, 8) / size;
     const canPinch = d(8, 0) / Math.max(1e-4, d(6, 0)) > 0.88;
-    if (!st.pinching && pr < 0.32 && canPinch) st.pinching = true;
-    else if (st.pinching && (pr > 0.5 || !canPinch)) st.pinching = false;
+    if (!st.pinching && pr < PINCH_ON && canPinch) st.pinching = true;
+    else if (st.pinching && (pr > PINCH_OFF || !canPinch)) st.pinching = false;
 
     let g = 'NONE';
     if (st.pinching) g = 'PINCH';
     else if (ext[0] && ext[1] && ext[2] && ext[3]) g = 'OPEN';
     else if (ext[0] && ext[1] && curl[2] && curl[3]) g = 'PEACE';
-    else if (ext[0] && curl[1] && curl[2] && curl[3]) g = 'POINT';
+    else if ((ext[0] || (ratios[0] > POINT_MIN && ratios[0] - Math.max(ratios[1], ratios[2], ratios[3]) > POINT_MARGIN)) && curl[1] && curl[2] && curl[3]) g = 'POINT';
     else if (curl[0] && curl[1] && curl[2] && curl[3]) g = 'FIST';
 
     if (g === st.cand) st.streak++;
@@ -106,7 +117,7 @@ export class GestureEngine {
       st.cand = g;
       st.streak = 1;
     }
-    const need = g === 'PINCH' ? 2 : g === 'PEACE' ? 8 : 3;
+    const need = g === 'PINCH' ? PINCH_FRAMES : g === 'PEACE' ? 8 : 3;
     if (st.streak >= need && st.stable !== st.cand) st.stable = st.cand;
 
     // viewport-space positions
@@ -139,6 +150,7 @@ export class GestureEngine {
       openness: st.open,
       pinching: st.pinching,
       rollDelta,
+      metrics: { ratios, pinchGap: pr }, // raw shape numbers, shown by the ?debug test
     };
     return st.last;
   }

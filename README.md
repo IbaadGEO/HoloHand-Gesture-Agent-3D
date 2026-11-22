@@ -33,8 +33,8 @@ Human Brain (4 lobes, cerebellum, brainstem, corpus callosum, thalamus, hippocam
 | Open hand slowly | Explode the model. The white arc on the gold ring shows how far. |
 | Close your hand / fist | Pull it back together |
 | Move or twist your hand | Rotate and tilt the model |
-| Point (index finger) | Highlight the part under your fingertip. Hold still to lock it. |
-| Pinch while over a part | Grab it, drag it out, release to snap it back |
+| Point up (index finger) | Highlight the part under your fingertip; its name shows next to it. Hold still to lock it. |
+| Pinch | Grab the highlighted part, drag it out, release to snap it back |
 | Two hands | Move them apart or together to zoom |
 | Peace sign (hold ~0.3 s) | Jump to the next model |
 

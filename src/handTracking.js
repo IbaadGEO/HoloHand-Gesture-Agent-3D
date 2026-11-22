@@ -63,7 +63,7 @@ export class HandTracker {
     throw lastErr || new Error('HandLandmarker failed to initialise');
   }
 
-  /** Returns an array of { landmarks, score, label } (0, 1 or 2 hands). Call once per new video frame. */
+  /** Returns an array of { landmarks, world, score, label } (0, 1 or 2 hands). Call once per new video frame. */
   detect(video, nowMs) {
     if (!this.ready) return [];
     let res;
@@ -75,6 +75,7 @@ export class HandTracker {
     if (!res || !res.landmarks || !res.landmarks.length) return [];
     return res.landmarks.map((landmarks, i) => ({
       landmarks,
+      world: res.worldLandmarks?.[i], // 3D hand in metres, used for gesture shape
       score: res.handedness?.[i]?.[0]?.score ?? 0.9,
       label: res.handedness?.[i]?.[0]?.categoryName || (i ? 'Left' : 'Right'),
     }));

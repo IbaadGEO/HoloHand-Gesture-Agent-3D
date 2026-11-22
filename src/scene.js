@@ -48,6 +48,19 @@ void main() {
   gl_FragColor = vec4(vColor, a * vA);
 }`;
 
+/**
+ * dists[i] = screen distance (px) from the cursor to part i. Returns the nearest part within maxDist,
+ * except that `prefer` is kept while it stays within 1.25 x maxDist and no other part is clearly closer.
+ */
+export function chooseSticky(dists, maxDist, prefer = -1) {
+  let w = -1;
+  for (let i = 0; i < dists.length; i++) if (dists[i] < maxDist && (w < 0 || dists[i] < dists[w])) w = i;
+  if (prefer < 0 || prefer === w || !(dists[prefer] < maxDist * 1.25)) return w;
+  // shortcut: fixed 12 px / 30% switch margin, tuned on one webcam; revisit if hover feels sluggish
+  if (w >= 0 && dists[prefer] - dists[w] > Math.max(12, dists[prefer] * 0.3)) return w;
+  return prefer;
+}
+
 function hexRgb(hex) {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
@@ -137,6 +150,7 @@ export class HoloScene {
     if (this.cache.has(i)) return this.cache.get(i);
     const def = this.models[i];
     const parts = def.build();
+    if (parts.length > MAXP) throw new Error(`${def.name} has ${parts.length} parts; the shader supports at most ${MAXP}`);
     let total = 0;
     for (const p of parts) for (const inst of p.instances) total += inst.cloud.n;
 
@@ -295,26 +309,21 @@ export class HoloScene {
     return { x: (out.x * 0.5 + 0.5) * this.W, y: (-out.y * 0.5 + 0.5) * this.H, z: out.z };
   }
 
-  /** Nearest part to a screen point (px). Returns part index or -1. */
-  pick(px, py, maxDist = 100) {
+  /** Nearest part to a screen point (px), or -1. With `prefer`, that part is kept until another is clearly closer. */
+  pick(px, py, maxDist = 100, prefer = -1) {
     const e = this.shownExplode;
     const v = new THREE.Vector3();
-    let best = -1;
-    let bd = maxDist;
+    const dists = this.parts.map(() => Infinity);
     this.group.updateMatrixWorld(true);
     this.parts.forEach((p, i) => {
       const s = p.samples;
       const off = this.uniforms.uOff.value[i];
       for (let k = 0; k < s.length; k += 6) {
         const sp = this._toScreen([s[k] + s[k + 3] * e + off.x, s[k + 1] + s[k + 4] * e + off.y, s[k + 2] + s[k + 5] * e + off.z], v);
-        const d = Math.hypot(sp.x - px, sp.y - py);
-        if (d < bd) {
-          bd = d;
-          best = i;
-        }
+        dists[i] = Math.min(dists[i], Math.hypot(sp.x - px, sp.y - py));
       }
     });
-    return best;
+    return chooseSticky(dists, maxDist, prefer);
   }
 
   /** Screen position of each part's label anchor. */
