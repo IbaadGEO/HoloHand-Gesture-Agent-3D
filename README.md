@@ -6,11 +6,11 @@ Fork maintained by **[Ibaad Sidik](https://github.com/IbaadGEO)** · original pr
 
 **Hand-controlled exploded 3D views in the browser, measured, fixed and extended with a cutaway of the Earth's interior**
 
-[![Original: tubakhxn/HoloHand](https://img.shields.io/badge/original-tubakhxn%2FHoloHand-7048e8?style=flat-square)](https://github.com/tubakhxn/HoloHand-Gesture-Agent-3D) ![Three.js 0.170](https://img.shields.io/badge/Three.js-0.170-049ef4?style=flat-square) ![MediaPipe Tasks Vision 0.10.14](https://img.shields.io/badge/MediaPipe-0.10.14-0097a7?style=flat-square) ![Vite 5.4](https://img.shields.io/badge/Vite-5.4-646cff?style=flat-square) ![Live test: 9 of 9](https://img.shields.io/badge/live_test-9_of_9_steps-2f9e44?style=flat-square) [![Code: MIT](https://img.shields.io/badge/code-MIT-868e96?style=flat-square)](LICENSE)
+[![Live demo](https://img.shields.io/badge/live_demo-holohand--earth.vercel.app-1971c2?style=flat-square)](https://holohand-earth.vercel.app) [![Original: tubakhxn/HoloHand](https://img.shields.io/badge/original-tubakhxn%2FHoloHand-7048e8?style=flat-square)](https://github.com/tubakhxn/HoloHand-Gesture-Agent-3D) ![Three.js 0.170](https://img.shields.io/badge/Three.js-0.170-049ef4?style=flat-square) ![MediaPipe Tasks Vision 0.10.14](https://img.shields.io/badge/MediaPipe-0.10.14-0097a7?style=flat-square) ![Vite 5.4](https://img.shields.io/badge/Vite-5.4-646cff?style=flat-square) ![Live test: 9 of 9](https://img.shields.io/badge/live_test-9_of_9_steps-2f9e44?style=flat-square) [![Code: MIT](https://img.shields.io/badge/code-MIT-868e96?style=flat-square)](LICENSE)
 
-<img src="docs/media/earth.webp" width="820" alt="The Earth's Interior model: the closed globe opens so the mantle and core halves separate and the crust pieces fly outward, the view rotates, and clicking a layer shows the upper mantle's description in the side panel">
+<a href="https://holohand-earth.vercel.app"><img src="docs/media/earth.webp" width="820" alt="The Earth's Interior model: the closed globe opens so the mantle and core halves separate and the crust pieces fly outward, the view rotates, and clicking a layer shows the upper mantle's description in the side panel"></a>
 
-<sub>The Earth's Interior model opening, rotating and a layer being inspected. Recorded with the mouse in headless Chromium; with a webcam the same actions are done by hand.</sub>
+<sub>The Earth's Interior model opening, rotating and a layer being inspected. Recorded with the mouse in headless Chromium; with a webcam the same actions are done by hand. Try it at <a href="https://holohand-earth.vercel.app">holohand-earth.vercel.app</a> (Chrome or Edge, allow the camera).</sub>
 
 </div>
 
