@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="820" height="98" viewBox="0 0 820 98" role="img" aria-label="Webcam to MediaPipe to the gesture engine to the controls to the Three.js model">
+<defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#9198a1"/></marker></defs>
+<g font-family="-apple-system, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif" text-anchor="middle">
+<rect x="1" y="1" width="150" height="96" rx="8" fill="#161b22" stroke="#3d444d" stroke-width="1.2"/>
+<text x="76.0" y="31" font-size="15" font-weight="600" fill="#f0f6fc">Webcam</text>
+<text x="76.0" y="55" font-size="13" fill="#9198a1">in the browser,</text>
+<text x="76.0" y="73" font-size="13" fill="#9198a1">nothing uploaded</text>
+<line x1="153" y1="49.0" x2="165" y2="49.0" stroke="#9198a1" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="168" y="1" width="150" height="96" rx="8" fill="#161b22" stroke="#3d444d" stroke-width="1.2"/>
+<text x="243.0" y="31" font-size="15" font-weight="600" fill="#f0f6fc">MediaPipe</text>
+<text x="243.0" y="55" font-size="13" fill="#9198a1">Hand Landmarker,</text>
+<text x="243.0" y="73" font-size="13" fill="#9198a1">21 points, 2D + 3D</text>
+<line x1="320" y1="49.0" x2="332" y2="49.0" stroke="#9198a1" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="335" y="1" width="150" height="96" rx="8" fill="#161b22" stroke="#3d444d" stroke-width="1.2"/>
+<text x="410.0" y="31" font-size="15" font-weight="600" fill="#f0f6fc">Gesture engine</text>
+<text x="410.0" y="55" font-size="13" fill="#9198a1">finger shape in 3D</text>
+<text x="410.0" y="73" font-size="13" fill="#9198a1">with hysteresis</text>
+<line x1="487" y1="49.0" x2="499" y2="49.0" stroke="#9198a1" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="502" y="1" width="150" height="96" rx="8" fill="#161b22" stroke="#3d444d" stroke-width="1.2"/>
+<text x="577.0" y="31" font-size="15" font-weight="600" fill="#f0f6fc">Controls</text>
+<text x="577.0" y="55" font-size="13" fill="#9198a1">explode, rotate,</text>
+<text x="577.0" y="73" font-size="13" fill="#9198a1">aim, grab, zoom</text>
+<line x1="654" y1="49.0" x2="666" y2="49.0" stroke="#9198a1" stroke-width="1.5" marker-end="url(#a)"/>
+<rect x="669" y="1" width="150" height="96" rx="8" fill="#161b22" stroke="#d9a53f" stroke-width="2"/>
+<text x="744.0" y="31" font-size="15" font-weight="600" fill="#f0f6fc">Three.js</text>
+<text x="744.0" y="55" font-size="13" fill="#9198a1">point-cloud model</text>
+<text x="744.0" y="73" font-size="13" fill="#9198a1">with labelled parts</text>
+</g></svg>

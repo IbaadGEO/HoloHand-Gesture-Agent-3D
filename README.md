@@ -24,13 +24,10 @@ The idea, renderer, original four models and app design are hers. Before adding 
 
 ## How it works
 
-```mermaid
-flowchart LR
-  A["<b>Webcam</b><br/>in the browser,<br/>nothing uploaded"] --> B["<b>MediaPipe</b><br/>Hand Landmarker<br/>21 points, 2D + 3D"]
-  B --> C["<b>Gesture engine</b><br/>finger shape in 3D<br/>with hysteresis"]
-  C --> D["<b>Controls</b><br/>explode, rotate,<br/>aim, grab, zoom"]
-  D --> E["<b>Three.js</b><br/>point-cloud model<br/>with labelled parts"]
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/media/flow-dark.svg">
+  <img src="docs/media/flow-light.svg" width="820" alt="How it works: the webcam, in the browser with nothing uploaded, feeds MediaPipe Hand Landmarker (21 points, 2D and 3D), then the gesture engine (finger shape in 3D with hysteresis), then the controls (explode, rotate, aim, grab, zoom), which drive the Three.js point-cloud model with labelled parts.">
+</picture>
 
 Every frame, MediaPipe finds up to two hands and returns 21 landmarks for each. The gesture engine turns them into one of open, fist, point, pinch or peace, plus how open the hand is and where the fingertip is. Those drive the model: openness explodes it, palm movement rotates it, the fingertip highlights a part and a pinch drags it out.
 
